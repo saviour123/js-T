@@ -1,68 +1,69 @@
 var ObjectID = require('mongodb').ObjectID;
 const Bus = require('../../config/models');
+let db = Bus();
 
 module.exports = function(app, db) {
-    // collection = db.collection('notes');
-    app.get('/notes/:id', (req, res) => {
-        const id = req.params.id;
-        try {
-            const details = { '_id': new ObjectID(id) };
-            db.collection('notes').findOne(details, (err, item) => {
-                if (err) {
-                    res.send({ 'error': 'Something strange happened' });
-                } else {
-                    res.send(item);
-                }
-            });
-        } catch (error) {
-            res.send({ "error": "not found" });
-        }
+
+    app.get('/api/v1/bus/:vehicle_id', (req, res) => {
+        const vehicle_id = req.params.vehicle_id;
+        db.findOne({ "vehicle_id": vehicle_id }, (err, succces) => {
+            if (err)
+                res.json(err);
+            console.log(succces.status);
+            const geoJson = {
+                "type": "FeatureCollection",
+                "features": [{
+                    "type": "Feature",
+                    "properties": {
+                        "vehicle_id": succces.vehicle_id,
+                        "status": succces.status,
+                        "nextStop": succces.nextStop,
+                        "bus_num": succces.bus_num,
+                        "lastUpdateTime": succces.lastUpdateTime,
+                        "accuracy": succces.accuracy
+                    },
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [
+                            succces.long,
+                            succces.lat
+                        ]
+                    }
+                }]
+            }
+            res.json(geoJson);
+        });
     });
 
-
-    app.post('/notes', (req, res) => {
-        const note = Bus({
-            bus_id: req.body.bus_id,
-            bus_num: req.body.bus_num,
-            lat: req.body.lat,
-            long: req.body.long,
-            alt: req.body.alt,
-            accuracy: req.body.accuracy,
-            date: Date.now()
-        });
-        note.save(function(err, succces) {
-            if (err) 
+    app.post('/api/v1/bus', (req, res) => {
+        let bus = Bus(req.body);
+        bus.save(function(err, succces) {
+            if (err)
                 res.send(err);
             res.json(succces);
         });
     });
 
-    app.delete('/notes/:id', (req, res) => {
-        const id = req.params.id;
-        const details = { '_id': new ObjectID(id) };
-        db.collection('notes').remove(details, (err, item) => {
+    app.delete('/api/v1/bus/:vehicle_id', (req, res) => {
+        const id = req.params.vehicle_id;
+        db.deleteOne(id, (err, succces) => {
             if (err) {
-                res.send({ 'error': 'an error has occured' });
+                res.send(err);
             } else {
-                res.send('Note ' + id + ' deleted!');
+                res.json('Record ' + id + ' deleted!');
             }
         })
     });
 
-    app.put('/notes/:id', (req, res) => {
-        const id = req.params.id;
-        const details = { '_id': new ObjectID(id) };
-        const note = { 'text': req.body.name, 'title': req.body.title };
-
-        db.collection('notes').update(details, note, (err, result) => {
-
+    app.put('/api/v1/bus/:vehicle_id', (req, res) => {
+        const id = { id: req.params.vehicle_id };
+        const busUpdate = req.body;
+        db.findOneAndupdate(id, busUpdate, (err, result) => {
             if (err) {
                 res.send({ 'error': 'something strange happend' });
             } else {
-                res.send(note);
+                res.send(result);
             }
-            console.log(req.params);
-            console.log(res.body);
         });
     });
 };
