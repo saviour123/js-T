@@ -15,6 +15,11 @@ const app = express();
 app.use(bodyParser.urlencoded({ extended: true }));
 routes(app, db);
 
+// build generic error handling
+app.use((req, res) => {
+    console.log(req.status);
+});
+
 app.listen(port, () => {
     console.log('DevServer running on ' + port);
 });
